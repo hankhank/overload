@@ -1,7 +1,12 @@
 #define _GNU_SOURCE 1
 #include <stdio.h>
 #include <dlfcn.h>
+#include <stdarg.h>
 #include "plthook.h"
+#include "overload.h"
+
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
 void _ol_logger(const char* fmt, ...) 
 {
@@ -13,25 +18,14 @@ void _ol_logger(const char* fmt, ...)
     ol_logger(buff);
 }
 
-#define LOG(...) (_ol_logger("ol[%s]:", __func__), _ol_logger(__VA_ARGS))
+#define LOG(...) (_ol_logger("ol[%s]: ", __func__), _ol_logger(__VA_ARGS__), _ol_logger("\n"))
 
-void *dlopen(const char *filename, int flag)
+void hook_em(plthook_t *plthook)
 {
-    LOG("hooked dlopen for %s\n", filename);
-
-    void* (*orig_dlopen)(const char *, int) = dlsym(RTLD_NEXT, "dlopen");
-    void* addr = orig_dlopen(filename, flag);
-
-    plthook_t *plthook;
-    if (plthook_open_shared_library_by_ptr(&plthook, addr) != 0)
+    int i = 0;
+    for (; i < ol_num_hooked_funcs; i++)
     {
-        LOG("plthook_open error: %s\n", plthook_error());
-        return addr;
-    }
-    
-    for (int i = 0; i < ol_num_hooked_funcs; i++)
-    {
-        ol_hooked_func* ohf = funcs_to_hook[i];
+        ol_hooked_func* ohf = &funcs_to_hook[i];
         if 
         (
             plthook_replace
@@ -43,10 +37,47 @@ void *dlopen(const char *filename, int flag)
             ) != 0
         )
         {
-            LOG("plthook_replace error: %s\n", plthook_error());
+            LOG("plthook_replace error: %s", plthook_error());
         }
     }
+}
+
+void *dlopen(const char *filename, int flag)
+{
+    LOG("hooked dlopen for %s", filename);
+
+    void* (*orig_dlopen)(const char *, int) = dlsym(RTLD_NEXT, "dlopen");
+    void* addr = orig_dlopen(filename, flag);
+
+    plthook_t *plthook;
+    if (plthook_open_shared_library_by_ptr(&plthook, addr) != 0)
+    {
+        LOG("plthook_open error: %s", plthook_error());
+        return addr;
+    }
+    
+    hook_em(plthook);
 
     plthook_close(plthook);
     return addr;
 }
+
+#if (defined(HOOK_ON_INIT_FUNC) && defined(HOOK_ON_INIT_LIB))
+
+void init()
+{
+    LOG("Attempting to hook " STRINGIZE_VALUE_OF(HOOK_ON_INIT_FUNC));
+
+    plthook_t *plthook;
+    if (plthook_open(&plthook, STRINGIZE_VALUE_OF(HOOK_ON_INIT_LIB)) != 0)
+    {
+        LOG("plthook_open error: %s", plthook_error());
+        return;
+    }
+    
+    hook_em(plthook);
+    plthook_close(plthook);
+}
+#else
+void init(){}
+#endif

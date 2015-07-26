@@ -442,7 +442,6 @@ int plthook_replace(plthook_t *plthook, const char *funcname, void *funcaddr, vo
         return PLTHOOK_INVALID_ARGUMENT;
     }
     while ((rv = plthook_enum(plthook, &pos, &name, &addr)) == 0) {
-        printf("sym name %s\n", name);
         if (strncmp(name, funcname, funcnamelen) == 0) {
             if (name[funcnamelen] == '\0' || name[funcnamelen] == '@') {
                 if (oldfunc) {

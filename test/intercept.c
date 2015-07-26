@@ -6,7 +6,7 @@ void test1()
     printf("Test1: intercept called - success\n");
 }
 
-void test2()
+void nonpreload_test2()
 {
     printf("Test2: intercept called - success\n");
 }
@@ -18,10 +18,11 @@ void test3()
 
 ol_hooked_func funcs_to_hook[OL_MAX_HOOKED_FUNCS] =
 {
+    {"test2_internal", NULL, nonpreload_test2},
     {"test3_internal", NULL, test3}
 };
 
-int ol_num_hooked_funcs = 1;
+int ol_num_hooked_funcs = 2;
 
 void ol_logger(const char* msg)
 {

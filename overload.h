@@ -32,7 +32,7 @@ typedef struct
 
 } ol_hooked_func;
 
-extern ol_hooked_func funcs_to_hook[OL_MAX_HOOKED_FUNCS];
+extern ol_hooked_func ol_funcs_to_hook[OL_MAX_HOOKED_FUNCS];
 extern int ol_num_hooked_funcs;
  
 void ol_logger(const char* msg);
